@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>QR Code Scanner</title>
+    <script src="/scripts/html5-qrcode.min.js"></script>
+</head>
+<body style="text-align: center">
+<h2>QR Code Scanner</h2>
+<div id="reader"></div>
+<div>
+    <span id="prevCode"></span>
+    <button onclick="setPrevCode(null)">Clear</button>
+    <button id="toggleCamera" onclick="toggleCamera()">Start Camera</button>
+</div>
+<script>
+    let prevCode = null;
+    let html5QrCode = null;
+    let isCameraRunning = false;
+
+    function setPrevCode(code) {
+        prevCode = code;
+        document.getElementById('prevCode').innerText = code ? `Previous QR Code: ${code}` : '';
+    }
+
+    function onScanSuccess(qrCodeMessage) {
+        console.log(`QR Code detected: ${qrCodeMessage}`);
+        if (prevCode === qrCodeMessage) {
+            return;
+        }
+        setPrevCode(qrCodeMessage);
+
+        fetch('/scan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({qrCode: qrCodeMessage})
+        }).then(response => {
+            if (response.ok) {
+                console.log('QR Code sent to server successfully');
+            } else {
+                console.error('Failed to send QR Code to server');
+            }
+        });
+    }
+
+    function onScanFailure(error) {
+        console.warn(`QR Code scan error: ${error}`);
+    }
+
+    function toggleCamera() {
+        const button = document.getElementById('toggleCamera');
+        if (isCameraRunning) {
+            html5QrCode.stop().then(() => {
+                console.log('Camera stopped');
+                button.innerText = 'Start Camera';
+                isCameraRunning = false;
+            }).catch(err => {
+                console.error('Unable to stop camera', err);
+            });
+        } else {
+            html5QrCode = new Html5Qrcode("reader", {
+                formatsToSupport: [
+                    Html5QrcodeSupportedFormats.QR_CODE
+                ]
+            });
+            const config = {
+                qrbox: {
+                    width: 250,
+                    height: 250,
+                }
+            };
+            html5QrCode.start(
+                {facingMode: "environment"},
+                config,
+                onScanSuccess,
+                onScanFailure
+            ).then(() => {
+                console.log('Camera started');
+                button.innerText = 'Stop Camera';
+                isCameraRunning = true;
+            }).catch(err => {
+                console.error('Unable to start scanning', err);
+            });
+        }
+    }
+
+    toggleCamera();
+</script>
+</body>
+</html>
