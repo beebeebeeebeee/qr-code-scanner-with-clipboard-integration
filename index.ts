@@ -18,7 +18,7 @@ app.listen(config.port, async () => {
     const serviceIp = getServiceIp()
     console.log(`Server is running on http://${serviceIp ?? '127.0.0.1'}:${config.port}`);
 
-    if (!config.localtunnleHost) {
+    if (config.localtunnleHost) {
         const tunnel = await localtunnel({
             port: config.port,
             host: config.localtunnleHost,
